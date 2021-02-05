@@ -57,6 +57,8 @@ interface Food {
   price: number;
   image_url: string;
   formattedPrice: string;
+  category: number;
+  thumbnail_url: string;
   extras: Extra[];
 }
 
@@ -74,37 +76,137 @@ const FoodDetails: React.FC = () => {
   useEffect(() => {
     async function loadFood(): Promise<void> {
       // Load a specific food with extras based on routeParams id
+
+      const { data } = await api.get(`/foods/${routeParams.id}`);
+      const formattedPrice = formatValue(data.price);
+
+      setFood({ ...data, formattedPrice });
+      setExtras([
+        ...data.extras.map((extra: Extra) => {
+          return {
+            ...extra,
+            quantity: 0,
+          };
+        }),
+      ]);
     }
 
     loadFood();
   }, [routeParams]);
 
   function handleIncrementExtra(id: number): void {
-    // Increment extra quantity
+    const addingExtra = [
+      ...extras.map(extra => {
+        if (extra.id === id && extra.quantity < 5) {
+          extra.quantity += 1;
+        }
+
+        return extra;
+      }),
+    ];
+
+    setExtras([...addingExtra]);
   }
 
   function handleDecrementExtra(id: number): void {
-    // Decrement extra quantity
+    const removingExtra = [
+      ...extras.map(extra => {
+        if (extra.id === id && extra.quantity > 0) {
+          extra.quantity -= 1;
+        }
+
+        return extra;
+      }),
+    ];
+
+    setExtras([...removingExtra]);
   }
 
   function handleIncrementFood(): void {
-    // Increment food quantity
+    setFoodQuantity(actual => actual + 1);
   }
 
   function handleDecrementFood(): void {
-    // Decrement food quantity
+    if (foodQuantity > 1) {
+      setFoodQuantity(actual => actual - 1);
+    }
   }
 
   const toggleFavorite = useCallback(() => {
     // Toggle if food is favorite or not
+    setIsFavorite(!isFavorite);
+
+    async function updateFavorites(): Promise<void> {
+      try {
+        // if (isFavorite) {
+        //   await api.post('/favorites', {
+        //     id: food.id,
+        //     name: food.name,
+        //     description: food.description,
+        //     price: food.price,
+        //     image_url: food.image_url,
+        //     thumbnails_url: food.
+        //   })}
+        // } else {
+        //   await api.delete('/favorites', {
+        //     data: food,
+        //   });
+        // }
+      } catch (err) {
+        console.log(err);
+      }
+    }
+
+    updateFavorites();
   }, [isFavorite, food]);
 
   const cartTotal = useMemo(() => {
-    // Calculate cartTotal
+    let extrasSum = 0;
+
+    extras.forEach(extra => {
+      extrasSum += extra.quantity * extra.value;
+    });
+
+    const totalPrice = extrasSum + food.price * foodQuantity;
+    return formatValue(totalPrice);
   }, [extras, food, foodQuantity]);
 
   async function handleFinishOrder(): Promise<void> {
     // Finish the order and save on the API
+
+    try {
+      console.log(food);
+
+      await api.post('/orders', {
+        id: food.id + 11,
+        name: food.name,
+        description: food.description,
+        price: food.price,
+        category: food.category,
+        thumbnail_url: food.thumbnail_url,
+        extras,
+      });
+    } catch (err) {
+      console.log(err);
+    }
+
+    // {
+    //     "id": 1,
+    //     "product_id": 1,
+    //     "name": "Ao molho",
+    //     "description": "Macarrão ao molho branco, fughi e cheiro verde das montanhas.",
+    //     "price": 19.9,
+    //     "category": 1,
+    //     "thumbnail_url": "https://storage.googleapis.com/golden-wind/bootcamp-gostack/desafio-gorestaurant-mobile/ao_molho.png",
+    //     "extras": [
+    //       {
+    //         "id": 4,
+    //         "name": "Bacon",
+    //         "value": 1.5,
+    //         "quantity": 1
+    //       }
+    //     ]
+    //   }
   }
 
   // Calculate the correct icon name
